@@ -1,25 +1,145 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
+title: "Activity Monitoring Data Analysis"
 output: 
-  html_document:
-    keep_md: true
+  html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-## Loading and preprocessing the data
+## R Markdown
+
+This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
+
+```{r step1}
+download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip","testfile5.zip",mode = "wb")
+unzip("testfile5.zip")
+activity_1 <- read.csv("activity.csv", stringsAsFactors = FALSE)
+activity_without_na <- na.omit(activity_1)
+totstepsperday <- aggregate(activity_without_na$steps,list(activity_without_na$date),sum)
+
+
+meanstepsperday <- aggregate(activity_without_na$steps,list(activity_without_na$date),mean)
+names(meanstepsperday)[1]<- "Day"
+names(meanstepsperday)[2]<- "Mean Steps"
+medianstepsperday <- aggregate(activity_without_na$steps,list(activity_without_na$date),median)
+names(medianstepsperday)[1]<- "Day"
+names(medianstepsperday)[2]<- "Median Steps"
+
+```
+##Histogram of the total number of steps taken per day
+```{r Step2, echo=TRUE}
+hist(totstepsperday$x,
+     main = "Total Steps per day",col= "red", 
+     xlab = "Total Steps")
+```
 
 
 
-## What is mean total number of steps taken per day?
+##Mean and median of the total number of steps taken per day
+```{r Step3, echo=TRUE}
+meanstepsperday
+medianstepsperday
+```
+
+##Time series plot of the average number of steps taken is below
+```{r Step4, echo=TRUE}
+averagestepsperdayinterval <- aggregate(activity_without_na$steps,list(activity_without_na$date,activity_without_na$interval),mean)
+plot(averagestepsperdayinterval$Group.2,averagestepsperdayinterval$x,type = "l" , xlab = "Time Interval" , ylab = "Steps")
+```
+```{r Step5, echo=TRUE}
+maxstepsperinterval <- aggregate(activity_without_na$steps,list(activity_without_na$interval),max)
+intervalnos <- maxstepsperinterval[which.max(maxstepsperinterval$x),]
+```
+
+##The 5-minute interval, on average across all the days in the dataset which contains the maximum number of steps is ```r intervalnos$Group.1 ```
+
+## Code to describe and show a strategy for imputing missing data
+
+```{r Step6, echo=TRUE}
+activity_with_na <- subset(activity_1, is.na(activity_1$steps))
+#NROW(activity_with_na)
+meansteps <- mean(activity_without_na$steps)
+activity_with_na$steps <- meansteps
+activity_rep_na <- rbind(activity_without_na,activity_with_na)
+totstepsperdaymod <- aggregate(activity_rep_na$steps,list(activity_rep_na$date),sum)
+meanstepsperdaymod <- aggregate(activity_rep_na$steps,list(activity_rep_na$date),mean)
+medianstepsperdaymod <- aggregate(activity_rep_na$steps,list(activity_rep_na$date),median)
+
+names(meanstepsperdaymod)[1]<- "Day"
+names(meanstepsperdaymod)[2]<- "Mean Steps"
+names(medianstepsperdaymod)[1]<- "Day"
+names(medianstepsperdaymod)[2]<- "Median Steps"
+
+
+```
+
+##The total number of missing values in the dataset is ```r NROW(activity_with_na) ```
+
+
+##Histogram of the total number of steps taken each day after missing values are imputed
+```{r Step8, echo=TRUE}
+hist(totstepsperdaymod$x,
+     main = "Total Steps per day after missing values are imputed",col= "orange", 
+     xlab = "Total Steps")
+```
 
 
 
-## What is the average daily activity pattern?
+##Mean and median of the total number of steps taken per day incuding missing data
+```{r Step9, echo=TRUE}
+meanstepsperdaymod
+medianstepsperdaymod
+```
+
+##Activity patterns between weekdays and weekends
+
+```{r Step10, echo=TRUE}
+#install.packages("anytime")
+library(anytime)
+activity_rep_na_mod <- activity_rep_na
+activity_rep_na_mod$date=anydate(activity_rep_na_mod$date)
+weekday_col <- weekdays(activity_rep_na_mod$date)
+activity_rep_na_mod_week <- cbind(activity_rep_na_mod,weekday_col)
+levels(activity_rep_na_mod_week$weekday_col)[levels(activity_rep_na_mod_week$weekday_col)=="Monday" ] <- "weekday"
+levels(activity_rep_na_mod_week$weekday_col)[levels(activity_rep_na_mod_week$weekday_col)=="Tuesday" ] <- "weekday"
+levels(activity_rep_na_mod_week$weekday_col)[levels(activity_rep_na_mod_week$weekday_col)=="Wednesday" ] <- "weekday"
+levels(activity_rep_na_mod_week$weekday_col)[levels(activity_rep_na_mod_week$weekday_col)=="Thursday" ] <- "weekday"
+levels(activity_rep_na_mod_week$weekday_col)[levels(activity_rep_na_mod_week$weekday_col)=="Friday" ] <- "weekday"
+levels(activity_rep_na_mod_week$weekday_col)[levels(activity_rep_na_mod_week$weekday_col)=="Saturday" ] <- "weekend"
+levels(activity_rep_na_mod_week$weekday_col)[levels(activity_rep_na_mod_week$weekday_col)=="Sunday" ] <- "weekend"
+
+activity_rep_na_mod_weekday <- subset(activity_rep_na_mod_week,activity_rep_na_mod_week$weekday_col=="weekday")
+activity_rep_na_mod_weekend <- subset(activity_rep_na_mod_week,activity_rep_na_mod_week$weekday_col=="weekend")
+
+averagestepsperweekday <- aggregate(activity_rep_na_mod_weekday$steps,list(activity_rep_na_mod_weekday$interval),mean)
+names(averagestepsperweekday)[1]<- "Time Interval"
+names(averagestepsperweekday)[2]<-  "Steps"
 
 
+averagestepsperweekend <- aggregate(activity_rep_na_mod_weekend$steps,list(activity_rep_na_mod_weekend$interval),mean)
+names(averagestepsperweekend)[1]<- "Time Interval"
+names(averagestepsperweekend)[2]<-  "Steps"
 
-## Imputing missing values
+
+library(ggplot2)
+library(grid)
+library(gridExtra)
+
+```
+
+##Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends.
+
+```{r Step11, echo=TRUE}
+plot1 <- ggplot(averagestepsperweekday, aes(x=averagestepsperweekday$`Time Interval`, y=averagestepsperweekday$Steps))+
+  geom_line()+
+  labs(x="Interval", y="No of Steps" ,title ="Weekdays")
 
 
-
-## Are there differences in activity patterns between weekdays and weekends?
+plot2 <- ggplot(averagestepsperweekend, aes(x=averagestepsperweekend$`Time Interval`, y=averagestepsperweekend$Steps))+
+  geom_line()+
+  labs(x="Interval", y="No of Steps" , title = "Weekend")
+ 
+grid.arrange(plot1, plot2, ncol =1)
+```
